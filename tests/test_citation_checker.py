@@ -233,6 +233,61 @@ def test_split_references():
     assert "Second paper" in citations_apa[1]["raw_reference"]
 
 
+def test_split_references_llm_success():
+    from app.extractor.pdf_parser import split_references_with_llm
+    from app.verifier.context import openrouter_key_var
+    
+    mock_response = {
+        "choices": [
+            {
+                "message": {
+                    "content": '{"references": ["Ref A", "Ref B"]}'
+                }
+            }
+        ]
+    }
+    
+    with patch("httpx.Client.post") as mock_post:
+        from unittest.mock import MagicMock
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = mock_response
+        mock_post.return_value = mock_resp
+        
+        token = openrouter_key_var.set("fake_key")
+        try:
+            with patch.dict("os.environ", {"PYTEST_CURRENT_TEST": ""}):
+                citations = split_references_with_llm("raw text")
+                
+                assert citations is not None
+                assert len(citations) == 2
+                assert citations[0]["reference_id"] == 1
+                assert citations[0]["raw_reference"] == "Ref A"
+                assert citations[1]["reference_id"] == 2
+                assert citations[1]["raw_reference"] == "Ref B"
+        finally:
+            openrouter_key_var.reset(token)
+
+def test_split_references_llm_failure():
+    from app.extractor.pdf_parser import split_references_with_llm
+    from app.verifier.context import openrouter_key_var
+    
+    with patch("httpx.Client.post") as mock_post:
+        from unittest.mock import MagicMock
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_resp.text = "Internal Server Error"
+        mock_post.return_value = mock_resp
+        
+        token = openrouter_key_var.set("fake_key")
+        try:
+            with patch.dict("os.environ", {"PYTEST_CURRENT_TEST": ""}):
+                citations = split_references_with_llm("raw text")
+                assert citations is None
+        finally:
+            openrouter_key_var.reset(token)
+
+
 # ----------------- DOCX Generator Tests -----------------
 
 def test_docx_generation():

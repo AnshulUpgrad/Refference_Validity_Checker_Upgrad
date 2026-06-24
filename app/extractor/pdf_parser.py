@@ -1,6 +1,13 @@
 import fitz  # PyMuPDF
 import re
-from typing import List, Dict, Any
+import os
+import json
+import logging
+import httpx
+from typing import List, Dict, Any, Optional
+from app.verifier.context import openrouter_key_var
+
+logger = logging.getLogger("pdf_parser")
 
 def extract_references_from_pdf(pdf_path: str) -> List[Dict[str, Any]]:
     """
@@ -87,14 +94,98 @@ def extract_references_from_pdf(pdf_path: str) -> List[Dict[str, Any]]:
     extracted = split_references(full_references_text)
     return extracted
 
+def split_references_with_llm(text: str) -> Optional[List[Dict[str, Any]]]:
+    """
+    Splits a raw block of references text into individual citations using Gemini via OpenRouter.
+    """
+    # Skip if running under pytest to avoid unexpected API calls during unit tests
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        logger.info("Skipping LLM-based reference splitting because we are in a pytest environment.")
+        return None
+
+    api_key = openrouter_key_var.get() or os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        logger.info("OpenRouter API key not configured. Falling back to heuristic-based reference splitting.")
+        return None
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    system_prompt = (
+        "You are an academic citation parsing assistant. Your task is to analyze a raw block of text "
+        "containing references/bibliography from an academic paper, and split them into a list of unique, "
+        "individual citation strings.\n\n"
+        "Guidelines:\n"
+        "1. Identify all separate publications/citations listed in the text.\n"
+        "2. Even if citations are merged on the same line, run together, or lack line breaks (e.g. one citation "
+        "ends with a URL and the next author's name immediately follows), split them correctly into distinct, individual references.\n"
+        "3. Preserve the full content of each reference, including all authors, title, year, journal, publisher, URLs, DOIs, etc.\n"
+        "4. Do not summarize, alter, or omit any details. Do not clean up brackets, numbers, or prefixing spaces at this stage.\n"
+        "5. Return ONLY a JSON object matching this schema:\n"
+        "{\n"
+        "  \"references\": [\n"
+        "    \"Reference 1 text...\",\n"
+        "    \"Reference 2 text...\"\n"
+        "  ]\n"
+        "}"
+    )
+
+    user_content = f"Here is the raw references block of text:\n\n{text}"
+
+    payload = {
+        "model": "google/gemini-2.5-flash",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ],
+        "response_format": {"type": "json_object"}
+    }
+
+    try:
+        logger.info("Requesting Gemini (via OpenRouter) to split references...")
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                content = response.json()["choices"][0]["message"]["content"]
+                result = json.loads(content, strict=False)
+                references_list = result.get("references", [])
+                
+                # Convert list of strings to list of dicts matching the expected structure
+                citations = []
+                for idx, ref_str in enumerate(references_list, start=1):
+                    ref_str = ref_str.strip()
+                    if ref_str:
+                        citations.append({
+                            "reference_id": idx,
+                            "raw_reference": ref_str
+                        })
+                logger.info(f"Successfully split into {len(citations)} references using LLM.")
+                return citations
+            else:
+                logger.error(f"OpenRouter API error (status code {response.status_code}): {response.text}")
+    except Exception as e:
+        logger.error(f"Failed to split references using LLM: {e}")
+        
+    return None
+
 def split_references(text: str) -> List[Dict[str, Any]]:
     """
-    Heuristically splits a block of references text into individual citation strings.
-    Supports:
-    1. Numbered bracket style: [1] ... \n [2] ...
-    2. Numbered period style: 1. ... \n 2. ...
-    3. APA / Author-Year style (split by newlines and grouped)
+    Splits a block of references text into individual citation strings.
+    Tries LLM-based splitting first, falling back to heuristics if unavailable or failing.
     """
+    # 1. Try LLM-based splitting
+    llm_citations = split_references_with_llm(text)
+    if llm_citations is not None:
+        return llm_citations
+
+    # 2. Heuristically splits a block of references text into individual citation strings.
+    # Supports:
+    # 1. Numbered bracket style: [1] ... \n [2] ...
+    # 2. Numbered period style: 1. ... \n 2. ...
+    # 3. APA / Author-Year style (split by newlines and grouped)
     # Normalize space characters but keep newlines
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     
