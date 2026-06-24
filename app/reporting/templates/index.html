@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Literature Review Source Checker</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            
+            --color-verified: #10b981;
+            --color-verified-bg: rgba(16, 185, 129, 0.15);
+            
+            --color-no-doi: #f59e0b;
+            --color-no-doi-bg: rgba(245, 158, 11, 0.15);
+            
+            --color-legit-llm: #38bdf8;
+            --color-legit-llm-bg: rgba(56, 189, 248, 0.15);
+            --glow-legit-llm: 0 0 20px rgba(56, 189, 248, 0.2);
+            
+            --color-review: #8b5cf6;
+            --color-review-bg: rgba(139, 92, 246, 0.15);
+            
+            --color-fake: #f43f5e;
+            --color-fake-bg: rgba(244, 63, 94, 0.15);
+            --glow-fake: 0 0 25px rgba(244, 63, 94, 0.25);
+            
+            --color-unverified: #64748b;
+            --color-unverified-bg: rgba(100, 116, 139, 0.15);
+            --glow-unverified: 0 0 20px rgba(100, 116, 139, 0.1);
+            
+            --color-not-found: #ef4444;
+            --color-not-found-bg: rgba(239, 68, 68, 0.15);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --glow-verified: 0 0 20px rgba(16, 185, 129, 0.2);
+            --glow-no-doi: 0 0 20px rgba(245, 158, 11, 0.2);
+            --glow-review: 0 0 20px rgba(139, 92, 246, 0.2);
+            --glow-not-found: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        /* Header Style */
+        header {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Views management */
+        .view-panel {
+            display: none;
+            width: 100%;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 1. Upload View */
+        .upload-card {
+            background-color: var(--bg-card);
+            border: 2px dashed var(--border-color);
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .upload-card:hover, .upload-card.dragover {
+            border-color: #6366f1;
+            background-color: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-icon {
+            color: #6366f1;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+        }
+
+        .upload-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .upload-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 2. Loading View */
+        .loading-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(99, 102, 241, 0.1);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 2rem auto;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .loading-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .progress-steps {
+            text-align: left;
+            margin-top: 2rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .step-item {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .step-item.active {
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        
+        .step-item.done {
+            color: var(--color-verified);
+        }
+
+        /* 3. Dashboard View */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card.total { border-top: 4px solid var(--text-secondary); }
+        .card.verified { border-top: 4px solid var(--color-verified); }
+        .card.no-doi { border-top: 4px solid var(--color-no-doi); }
+        .card.legitimate-llm { border-top: 4px solid var(--color-legit-llm); }
+        .card.review { border-top: 4px solid var(--color-review); }
+        .card.fake { border-top: 4px solid var(--color-fake); }
+        .card.unverified { border-top: 4px solid var(--color-unverified); }
+
+        .card.verified:hover { box-shadow: var(--glow-verified); }
+        .card.no-doi:hover { box-shadow: var(--glow-no-doi); }
+        .card.legitimate-llm:hover { box-shadow: var(--glow-legit-llm); }
+        .card.review:hover { box-shadow: var(--glow-review); }
+        .card.fake:hover { box-shadow: var(--glow-fake); }
+        .card.unverified:hover { box-shadow: var(--glow-unverified); }
+
+        .card-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0.4rem 0;
+        }
+
+        .card-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        @media (min-width: 768px) {
+            .controls-container {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex-grow: 1;
+            max-width: 500px;
+        }
+
+        .search-input {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.7rem 1rem 0.7rem 2.5rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #6366f1;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-filter, .btn-action {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-filter:hover, .btn-action:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+
+        .btn-filter.active {
+            background-color: #6366f1;
+            color: white;
+            border-color: #6366f1;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-action.reset-btn {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--color-not-found);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .btn-action.reset-btn:hover {
+            background-color: var(--color-not-found-bg);
+            border-color: var(--color-not-found);
+        }
+
+        .reference-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ref-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ref-item.hidden {
+            display: none !important;
+        }
+
+        .ref-header {
+            padding: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            gap: 1rem;
+        }
+
+        .ref-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .ref-id {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            min-width: 2.2rem;
+        }
+
+        .ref-text {
+            font-weight: 500;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.95rem;
+        }
+
+        .ref-badges {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.3rem 0.65rem;
+            border-radius: 9999px;
+            display: inline-block;
+        }
+
+        .badge.verified { background-color: var(--color-verified-bg); color: var(--color-verified); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge.no-doi { background-color: var(--color-no-doi-bg); color: var(--color-no-doi); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge.legit-llm { background-color: var(--color-legit-llm-bg); color: var(--color-legit-llm); border: 1px solid rgba(56, 189, 248, 0.2); }
+        .badge.review { background-color: var(--color-review-bg); color: var(--color-review); border: 1px solid rgba(139, 92, 246, 0.2); }
+        .badge.fake { background-color: var(--color-fake-bg); color: var(--color-fake); border: 1px solid rgba(244, 63, 94, 0.2); }
+        .badge.unverified { background-color: var(--color-unverified-bg); color: var(--color-unverified); border: 1px solid rgba(100, 116, 139, 0.2); }
+
+        .score-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .score-circle.high { border-color: var(--color-verified); color: var(--color-verified); }
+        .score-circle.medium { border-color: var(--color-review); color: var(--color-review); }
+        .score-circle.low { border-color: var(--color-unverified); color: var(--color-unverified); }
+        .score-circle.fake-circle { border-color: var(--color-fake); color: var(--color-fake); }
+
+        .arrow-icon {
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .ref-item.expanded .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        .ref-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: rgba(15, 23, 42, 0.5);
+            border-top: 1px solid transparent;
+        }
+
+        .ref-item.expanded .ref-details {
+            max-height: 1000px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .details-inner {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .details-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .details-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .details-block h4 {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .details-block p {
+            background-color: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            padding: 0.85rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .metadata-table td {
+            padding: 0.65rem 0.85rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .metadata-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .metadata-key {
+            color: var(--text-secondary);
+            font-weight: 600;
+            width: 30%;
+        }
+
+        .metadata-val {
+            color: var(--text-primary);
+        }
+
+        .metadata-val a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .metadata-val a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+
+        .score-breakdown {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            background-color: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            padding: 0.85rem 1.25rem;
+            border-radius: 10px;
+        }
+
+        .score-bar-container {
+            flex-grow: 1;
+            height: 10px;
+            background-color: var(--bg-dark);
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-bar {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease-out;
+        }
+
+        .score-bar.high { background: linear-gradient(90deg, #059669, #10b981); }
+        .score-bar.medium { background: linear-gradient(90deg, #38bdf8, #60a5fa); }
+        .score-bar.low { background: linear-gradient(90deg, #64748b, #94a3b8); }
+        .score-bar.fake-bar { background: linear-gradient(90deg, #dc2626, #ef4444); }
+
+        .score-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            min-width: 4rem;
+            text-align: right;
+        }
+
+        .score-text.high { color: var(--color-verified); }
+        .score-text.medium { color: var(--color-legit-llm); }
+        .score-text.low { color: var(--color-unverified); }
+        .score-text.fake-text { color: var(--color-fake); }
+        
+        .no-results-msg {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
+            font-size: 1rem;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Literature Review Source Checker</h1>
+            <p>Verify citation integrity. Instantly check if your references exist in scholarly databases.</p>
+        </header>
+
+        <!-- 1. Upload View -->
+        <div id="uploadView" class="view-panel active">
+            <div class="upload-card" id="dropZone" onclick="triggerFileInput()">
+                <div class="upload-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <h3>Upload Research Paper PDF</h3>
+                <p>Drag and drop your PDF here, or click to browse files</p>
+                <button class="btn-upload">Select PDF File</button>
+                <input type="file" id="fileInput" accept=".pdf" onchange="handleFileSelect(event)">
+            </div>
+        </div>
+
+        <!-- 2. Loading View -->
+        <div id="loadingView" class="view-panel">
+            <div class="loading-card">
+                <div class="spinner"></div>
+                <h3>Verifying References</h3>
+                <p>Please wait while we parse the bibliography and check Crossref...</p>
+                <div class="progress-steps" id="progressSteps">
+                    <div class="step-item active">> Initializing file upload...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Dashboard View -->
+        <div id="dashboardView" class="view-panel">
+            <!-- Stats Grid -->
+            <section class="dashboard-grid">
+                <div class="card total">
+                    <div class="card-val" id="statTotal">0</div>
+                    <div class="card-label">Total References</div>
+                </div>
+                <div class="card verified">
+                    <div class="card-val" id="statVerified">0</div>
+                    <div class="card-label">Legitimate</div>
+                </div>
+                <div class="card legitimate-llm">
+                    <div class="card-val" id="statLegitLlm">0</div>
+                    <div class="card-label">Legitimate (LLM)</div>
+                </div>
+                <div class="card review">
+                    <div class="card-val" id="statReview">0</div>
+                    <div class="card-label">Review Required</div>
+                </div>
+            </section>
+
+            <!-- Filters -->
+            <section class="controls-container">
+                <div class="search-wrapper">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search references by title, author, text...">
+                </div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <div class="filter-buttons">
+                        <button class="btn-filter active" data-filter="all">All</button>
+                        <button class="btn-filter" data-filter="VERIFIED">Legitimate</button>
+                        <button class="btn-filter" data-filter="LEGITIMATE_KNOWN">Legitimate (LLM)</button>
+                        <button class="btn-filter" data-filter="REVIEW_REQUIRED">Review Required</button>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-action" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-verified); border-color: rgba(16, 185, 129, 0.3);" onclick="downloadDocxReport()">Download Word Report</button>
+                        <button class="btn-action reset-btn" onclick="resetApp()">Upload Another</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Citations list -->
+            <section class="reference-list" id="refList">
+                <!-- Dynamically populated -->
+            </section>
+            <div id="noResults" class="no-results-msg" style="display: none;">
+                No references match the search and filter criteria.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // View routing helper
+        function showView(viewId) {
+            document.querySelectorAll('.view-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Drag & Drop event bindings
+        const dropZone = document.getElementById('dropZone');
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0 && files[0].name.toLowerCase().endsWith('.pdf')) {
+                uploadFile(files[0]);
+            } else {
+                alert("Only PDF files are accepted!");
+            }
+        });
+
+        function triggerFileInput() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+
+        function logStep(text, status = 'active') {
+            const stepsContainer = document.getElementById('progressSteps');
+            
+            // Mark last step done
+            const lastActive = stepsContainer.querySelector('.step-item.active');
+            if (lastActive) {
+                lastActive.classList.remove('active');
+                lastActive.classList.add('done');
+                lastActive.innerText = lastActive.innerText.replace('>', '✓');
+            }
+            
+            // Add new step
+            const div = document.createElement('div');
+            div.className = 'step-item ' + status;
+            div.innerText = (status === 'active' ? '> ' : '') + text;
+            stepsContainer.appendChild(div);
+            stepsContainer.scrollTop = stepsContainer.scrollHeight;
+        }
+
+        // Upload and process citation PDF
+        function uploadFile(file) {
+            showView('loadingView');
+            logStep("Uploading " + file.name + "...");
+            
+            setTimeout(() => logStep("Reading PDF content..."), 800);
+            setTimeout(() => logStep("Locating Reference section..."), 1600);
+            setTimeout(() => logStep("Segmenting references and querying databases (Crossref & arXiv)..."), 2400);
+            setTimeout(() => logStep("Running web search checks & auditing legitimacy using Gemini 2.5 Flash..."), 4000);
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Server processing failed.");
+                }
+                return response.json();
+            })
+            .then(data => {
+                logStep("Legitimacy verification completed successfully!", 'done');
+                setTimeout(() => {
+                    renderDashboard(data);
+                    showView('dashboardView');
+                }, 500);
+            })
+            .catch(error => {
+                alert("Error verifying paper: " + error.message);
+                resetApp();
+            });
+        }
+
+        // Render data returned from server
+        let allReferences = [];
+        
+        function renderDashboard(data) {
+            // Stats
+            document.getElementById('statTotal').innerText = data.summary.total_references;
+            document.getElementById('statVerified').innerText = data.summary.verified;
+            document.getElementById('statLegitLlm').innerText = data.summary.legitimate_llm || 0;
+            document.getElementById('statReview').innerText = data.summary.review_required;
+
+            allReferences = data.references;
+            const refList = document.getElementById('refList');
+            refList.innerHTML = ''; // clear
+
+            allReferences.forEach(ref => {
+                const item = document.createElement('div');
+                item.className = 'ref-item';
+                item.setAttribute('data-status', ref.status);
+                
+                // Construct search terms
+                let searchTerms = ref.raw_reference.toLowerCase();
+                if (ref.matched_metadata) {
+                    searchTerms += " " + ref.matched_metadata.title.toLowerCase() + " " + ref.matched_metadata.authors.toLowerCase();
+                }
+                item.setAttribute('data-text', searchTerms);
+
+                // Badge styling
+                let badgeClass = 'review';
+                let badgeText = 'Review Required';
+                let scoreClass = 'low';
+                if (ref.status === 'VERIFIED') {
+                    badgeClass = 'verified';
+                    badgeText = 'Legitimate';
+                    scoreClass = 'high';
+                } else if (ref.status === 'LEGITIMATE_KNOWN') {
+                    badgeClass = 'legit-llm';
+                    badgeText = 'Legitimate (LLM)';
+                    scoreClass = 'medium';
+                } else {
+                    badgeClass = 'review';
+                    badgeText = 'Review Required';
+                    if (ref.llm_verdict && ref.llm_verdict.verdict === 'SUSPECTED_FAKE') {
+                        scoreClass = 'fake-circle';
+                    } else if (ref.confidence >= 70) {
+                        scoreClass = 'high';
+                    } else if (ref.confidence >= 40) {
+                        scoreClass = 'medium';
+                    } else {
+                        scoreClass = 'low';
+                    }
+                }
+
+                // LLM verdict alert warning box
+                let llmVerdictHtml = '';
+                if (ref.llm_verdict) {
+                    const isFake = ref.llm_verdict.verdict === 'SUSPECTED_FAKE';
+                    const verdictTitle = isFake ? 'Suspected Fake Citation' : 'Verified Legitimate';
+                    const boxBg = isFake ? 'var(--color-fake-bg)' : 'var(--color-legit-llm-bg)';
+                    const boxBorder = isFake ? 'var(--color-fake)' : 'var(--color-legit-llm)';
+                    const titleColor = isFake ? 'var(--color-fake)' : 'var(--color-legit-llm)';
+                    
+                    llmVerdictHtml = `
+                        <div style="background-color: ${boxBg}; border: 1px solid ${boxBorder}; padding: 0.85rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <h4 style="color: ${titleColor}; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 0.25rem;">
+                                LLM Audit Verdict: ${verdictTitle}
+                            </h4>
+                            <p style="margin: 0; font-size: 0.9rem; color: var(--text-primary);">${ref.llm_verdict.reasoning}</p>
+                        </div>
+                    `;
+                }
+
+                // Metadata Table HTML
+                let metadataHtml = `<p style="color: var(--text-muted); font-style: italic;">No matching database metadata candidate scored high enough to associate.</p>`;
+                if (ref.matched_metadata) {
+                    metadataHtml = `
+                        <table class="metadata-table">
+                            <tr>
+                                <td class="metadata-key">Title</td>
+                                <td class="metadata-val">${ref.matched_metadata.title}</td>
+                            </tr>
+                            <tr>
+                                <td class="metadata-key">Authors</td>
+                                <td class="metadata-val">${ref.matched_metadata.authors}</td>
+                            </tr>
+                            <tr>
+                                <td class="metadata-key">Year</td>
+                                <td class="metadata-val">${ref.matched_metadata.year || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td class="metadata-key">Journal</td>
+                                <td class="metadata-val">${ref.matched_metadata.journal || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td class="metadata-key">Publisher</td>
+                                <td class="metadata-val">${ref.matched_metadata.publisher || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td class="metadata-key">DOI/URL</td>
+                                <td class="metadata-val">
+                                    ${ref.matched_metadata.doi ? `<a href="https://doi.org/${ref.matched_metadata.doi}" target="_blank">${ref.matched_metadata.doi}</a>` : (ref.matched_metadata.url ? `<a href="${ref.matched_metadata.url}" target="_blank">View Document Link</a>` : 'N/A')}
+                                </td>
+                            </tr>
+                        </table>
+                    `;
+                }
+
+                // Confidence Bar Color
+                let barClass = 'low';
+                if (ref.status === 'VERIFIED') {
+                    barClass = 'high';
+                } else if (ref.status === 'LEGITIMATE_KNOWN') {
+                    barClass = 'medium';
+                } else {
+                    if (ref.llm_verdict && ref.llm_verdict.verdict === 'SUSPECTED_FAKE') {
+                        barClass = 'fake-bar';
+                    } else if (ref.confidence >= 70) {
+                        barClass = 'high';
+                    } else if (ref.confidence >= 40) {
+                        barClass = 'medium';
+                    } else {
+                        barClass = 'low';
+                    }
+                }
+
+                item.innerHTML = `
+                    <div class="ref-header" onclick="toggleDetails(this)">
+                        <div class="ref-header-left">
+                            <span class="ref-id">#${ref.reference_id}</span>
+                            <span class="ref-text" title="${ref.raw_reference.replace(/"/g, '&quot;')}">${ref.raw_reference}</span>
+                        </div>
+                        <div class="ref-badges">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <span class="score-circle ${scoreClass}">${Math.floor(ref.confidence)}</span>
+                            <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="ref-details">
+                        <div class="details-inner">
+                            ${llmVerdictHtml}
+                            <div class="details-grid">
+                                <div class="details-block">
+                                    <h4>Original Reference Text</h4>
+                                    <p>${ref.raw_reference}</p>
+                                </div>
+                                <div class="details-block">
+                                    <h4>Verification Match Details</h4>
+                                    ${metadataHtml}
+                                </div>
+                            </div>
+                            <div class="details-block">
+                                <h4>Legitimacy Confidence Level</h4>
+                                <div class="score-breakdown">
+                                    <div class="score-bar-container">
+                                        <div class="score-bar ${barClass}" style="width: ${ref.confidence}%"></div>
+                                    </div>
+                                    <span class="score-text ${scoreClass}">${ref.confidence}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                refList.appendChild(item);
+            });
+            
+            // Reapply filters
+            updateList();
+        }
+
+        // Toggle Expand
+        function toggleDetails(header) {
+            const item = header.closest('.ref-item');
+            const isExpanded = item.classList.contains('expanded');
+            
+            // Close other items
+            document.querySelectorAll('.ref-item.expanded').forEach(el => {
+                if (el !== item) el.classList.remove('expanded');
+            });
+            
+            // Toggle current
+            if (isExpanded) item.classList.remove('expanded');
+            else item.classList.add('expanded');
+        }
+
+        // Filters and search logic
+        const searchInput = document.getElementById('searchInput');
+        const filterBtns = document.querySelectorAll('.btn-filter');
+        const refList = document.getElementById('refList');
+        const noResults = document.getElementById('noResults');
+
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        function updateList() {
+            let visibleCount = 0;
+            const refItems = document.querySelectorAll('.ref-item');
+
+            refItems.forEach(item => {
+                const status = item.getAttribute('data-status');
+                const text = item.getAttribute('data-text');
+
+                const matchesFilter = (currentFilter === 'all' || status === currentFilter);
+                const matchesSearch = text.includes(searchQuery);
+
+                if (matchesFilter && matchesSearch) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResults.style.display = 'block';
+            } else {
+                noResults.style.display = 'none';
+            }
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            updateList();
+        });
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                updateList();
+            });
+        });
+
+        // Download Word DOCX report
+        let isExporting = false;
+        function downloadDocxReport() {
+            if (isExporting || allReferences.length === 0) return;
+            isExporting = true;
+            
+            const payload = {
+                summary: {
+                    total_references: parseInt(document.getElementById('statTotal').innerText),
+                    verified: parseInt(document.getElementById('statVerified').innerText),
+                    legitimate_llm: parseInt(document.getElementById('statLegitLlm').innerText),
+                    review_required: parseInt(document.getElementById('statReview').innerText)
+                },
+                references: allReferences
+            };
+
+            fetch("/export/docx", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Failed to download DOCX report");
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'literature_review_verification_report.docx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                isExporting = false;
+            })
+            .catch(err => {
+                alert("Error exporting report: " + err.message);
+                isExporting = false;
+            });
+        }
+
+        // Reset to upload view
+        function resetApp() {
+            document.getElementById('fileInput').value = '';
+            document.getElementById('progressSteps').innerHTML = '<div class="step-item active">> Initializing file upload...</div>';
+            searchInput.value = '';
+            searchQuery = '';
+            currentFilter = 'all';
+            filterBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector('.btn-filter[data-filter="all"]').classList.add('active');
+
+            showView('uploadView');
+        }
+    </script>
+</body>
+</html>
