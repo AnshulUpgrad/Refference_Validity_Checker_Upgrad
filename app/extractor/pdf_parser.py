@@ -101,11 +101,13 @@ def split_references_with_llm(text: str) -> Optional[List[Dict[str, Any]]]:
     # Skip if running under pytest to avoid unexpected API calls during unit tests
     if os.getenv("PYTEST_CURRENT_TEST"):
         logger.info("Skipping LLM-based reference splitting because we are in a pytest environment.")
+        print("[LLM Splitter] Skipping because we are in a pytest environment.")
         return None
 
     api_key = openrouter_key_var.get() or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         logger.info("OpenRouter API key not configured. Falling back to heuristic-based reference splitting.")
+        print("[LLM Splitter] OpenRouter API key not configured. Falling back to heuristic-based reference splitting.")
         return None
 
     url = "https://openrouter.ai/api/v1/chat/completions"
@@ -146,7 +148,8 @@ def split_references_with_llm(text: str) -> Optional[List[Dict[str, Any]]]:
 
     try:
         logger.info("Requesting Gemini (via OpenRouter) to split references...")
-        with httpx.Client(timeout=30.0) as client:
+        print(f"[LLM Splitter] Requesting Gemini (via OpenRouter) to split references (length: {len(text)} characters)...")
+        with httpx.Client(timeout=60.0) as client:
             response = client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 content = response.json()["choices"][0]["message"]["content"]
@@ -163,11 +166,14 @@ def split_references_with_llm(text: str) -> Optional[List[Dict[str, Any]]]:
                             "raw_reference": ref_str
                         })
                 logger.info(f"Successfully split into {len(citations)} references using LLM.")
+                print(f"[LLM Splitter] Successfully split into {len(citations)} references using LLM.")
                 return citations
             else:
                 logger.error(f"OpenRouter API error (status code {response.status_code}): {response.text}")
+                print(f"[LLM Splitter] OpenRouter API error (status code {response.status_code}): {response.text}")
     except Exception as e:
         logger.error(f"Failed to split references using LLM: {e}")
+        print(f"[LLM Splitter] Failed to split references using LLM: {e}")
         
     return None
 
