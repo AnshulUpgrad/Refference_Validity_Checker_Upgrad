@@ -15,6 +15,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.extractor.pdf_parser import extract_references_from_pdf
+from app.extractor.docx_parser import extract_references_from_docx
 from app.main import process_citations
 from app.reporting.docx_generator import build_docx_report
 from app.verifier.context import openrouter_key_var, crossref_mailto_var
@@ -61,8 +62,9 @@ async def handle_pdf_upload(
     and returns the structured results as JSON.
     """
     # 1. Validate file format
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    filename_lower = file.filename.lower()
+    if not (filename_lower.endswith(".pdf") or filename_lower.endswith(".docx")):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported.")
         
     api_key_val = api_key.strip() if api_key else None
     email_val = email.strip() if email else None
@@ -73,7 +75,8 @@ async def handle_pdf_upload(
     temp_pdf_path = None
     try:
         # 2. Save uploaded file to a temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        file_suffix = ".docx" if filename_lower.endswith(".docx") else ".pdf"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp:
             shutil.copyfileobj(file.file, tmp)
             temp_pdf_path = tmp.name
             
@@ -81,10 +84,13 @@ async def handle_pdf_upload(
         
         # 3. Extract citations
         try:
-            citations = extract_references_from_pdf(temp_pdf_path)
+            if filename_lower.endswith(".docx"):
+                citations = extract_references_from_docx(temp_pdf_path)
+            else:
+                citations = extract_references_from_pdf(temp_pdf_path)
         except Exception as e:
-            logger.error(f"Error parsing PDF text: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to read/parse PDF text: {str(e)}")
+            logger.error(f"Error parsing document: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to read/parse document: {str(e)}")
             
         if not citations:
             return {

@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.extractor.pdf_parser import extract_references_from_pdf
+from app.extractor.docx_parser import extract_references_from_docx
 from app.normalizer.reference_cleaner import clean_reference
 from app.verifier.crossref_client import CrossrefClient
 from app.verifier.matcher import verify_reference
@@ -113,6 +114,13 @@ def main():
             citations = extract_references_from_pdf(args.file)
         except Exception as e:
             logger.error(f"Failed to read/parse PDF: {e}")
+            sys.exit(1)
+    elif file_ext == ".docx":
+        logger.info(f"Analyzing Word document: {args.file}")
+        try:
+            citations = extract_references_from_docx(args.file)
+        except Exception as e:
+            logger.error(f"Failed to read/parse Word document: {e}")
             sys.exit(1)
     else:
         # Treat as plain text file with one citation per line

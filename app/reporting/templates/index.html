@@ -955,10 +955,10 @@
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </div>
-                <h3>Upload Research Paper PDF</h3>
-                <p>Drag and drop your PDF here, or click to browse files</p>
-                <button class="btn-upload">Select PDF File</button>
-                <input type="file" id="fileInput" accept=".pdf" onchange="handleFileSelect(event)">
+                <h3>Upload Research Paper</h3>
+                <p>Drag and drop your PDF or Word document here, or click to browse files</p>
+                <button class="btn-upload">Select File</button>
+                <input type="file" id="fileInput" accept=".pdf,.docx" onchange="handleFileSelect(event)">
             </div>
         </div>
 
@@ -1063,10 +1063,11 @@
         dropZone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
             const files = dt.files;
-            if (files.length > 0 && files[0].name.toLowerCase().endsWith('.pdf')) {
+            const name = files.length > 0 ? files[0].name.toLowerCase() : '';
+            if (files.length > 0 && (name.endsWith('.pdf') || name.endsWith('.docx'))) {
                 uploadFile(files[0]);
             } else {
-                alert("Only PDF files are accepted!");
+                alert("Only PDF and Word (.docx) files are accepted!");
             }
         });
 
