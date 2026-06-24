@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 
 from app.verifier.crossref_client import SQLiteCache
+from app.verifier.context import crossref_mailto_var
 
 logger = logging.getLogger("doi_client")
 load_dotenv()
@@ -32,7 +33,7 @@ class DOIClient:
     """
     def __init__(self, cache_db_path: str = "cache/citation_cache.db"):
         self.cache = SQLiteCache(cache_db_path)
-        self.mailto = os.getenv("CROSSREF_MAILTO", "anonymous@example.com")
+        self.mailto = crossref_mailto_var.get() or os.getenv("CROSSREF_MAILTO", "anonymous@example.com")
         self.headers = {
             "User-Agent": f"LiteratureReviewSourceChecker/1.0 (mailto:{self.mailto})"
         }

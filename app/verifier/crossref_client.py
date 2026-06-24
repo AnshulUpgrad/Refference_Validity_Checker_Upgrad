@@ -7,6 +7,7 @@ import asyncio
 from typing import Optional, Dict, Any, List
 import httpx
 from dotenv import load_dotenv
+from app.verifier.context import crossref_mailto_var
 
 # Load environment variables
 load_dotenv()
@@ -101,7 +102,7 @@ class CrossrefClient:
 
     def __init__(self, mailto: Optional[str] = None, cache_db_path: str = "cache/citation_cache.db"):
         # Retrieve mailto from parameter or env
-        self.mailto = mailto or os.getenv("CROSSREF_MAILTO") or "anonymous@example.com"
+        self.mailto = mailto or crossref_mailto_var.get() or os.getenv("CROSSREF_MAILTO") or "anonymous@example.com"
         self.cache = SQLiteCache(cache_db_path)
         
         # Set up headers for the Crossref Polite Pool

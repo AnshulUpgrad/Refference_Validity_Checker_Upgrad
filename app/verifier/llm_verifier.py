@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Any, Optional, List
 import httpx
 from datetime import datetime
+from app.verifier.context import openrouter_key_var
 
 logger = logging.getLogger("llm_verifier")
 
@@ -21,7 +22,7 @@ async def verify_match_with_llm(
       - confidence (float)
       - reasoning (str)
     """
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = openrouter_key_var.get() or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         return None
 
@@ -103,7 +104,7 @@ async def verify_unmatched_citation(
       - confidence (float)
       - reasoning (str)
     """
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = openrouter_key_var.get() or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         return None
 
@@ -190,7 +191,7 @@ async def verify_doi_redirect_metadata(
       - confidence (float)
       - reasoning (str)
     """
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = openrouter_key_var.get() or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         return None
 

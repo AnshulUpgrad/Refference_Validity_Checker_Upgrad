@@ -2,10 +2,10 @@ import os
 import shutil
 import tempfile
 import logging
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import HTMLResponse, StreamingResponse
 import io
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import uvicorn
 from dotenv import load_dotenv
 
@@ -17,6 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.extractor.pdf_parser import extract_references_from_pdf
 from app.main import process_citations
 from app.reporting.docx_generator import build_docx_report
+from app.verifier.context import openrouter_key_var, crossref_mailto_var
 
 # Load config
 load_dotenv()
@@ -50,7 +51,11 @@ async def serve_index():
     return HTMLResponse(content=html_content)
 
 @app.post("/upload")
-async def handle_pdf_upload(file: UploadFile = File(...)):
+async def handle_pdf_upload(
+    file: UploadFile = File(...),
+    api_key: Optional[str] = Form(None),
+    email: Optional[str] = Form(None)
+):
     """
     Receives an academic paper PDF file, runs it through the verification pipeline,
     and returns the structured results as JSON.
@@ -59,6 +64,12 @@ async def handle_pdf_upload(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
         
+    api_key_val = api_key.strip() if api_key else None
+    email_val = email.strip() if email else None
+    
+    api_token = openrouter_key_var.set(api_key_val)
+    email_token = crossref_mailto_var.set(email_val)
+    
     temp_pdf_path = None
     try:
         # 2. Save uploaded file to a temporary location
@@ -87,7 +98,7 @@ async def handle_pdf_upload(file: UploadFile = File(...)):
             }
             
         # 4. Asynchronously process citations against Crossref
-        mailto_email = os.getenv("CROSSREF_MAILTO", "anonymous@example.com")
+        mailto_email = email_val or os.getenv("CROSSREF_MAILTO") or "anonymous@example.com"
         cache_path = "cache/citation_cache.db"
         
         results = await process_citations(citations, mailto_email, cache_path)
@@ -110,6 +121,10 @@ async def handle_pdf_upload(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"An error occurred while checking references: {str(e)}")
         
     finally:
+        # Reset context variables
+        openrouter_key_var.reset(api_token)
+        crossref_mailto_var.reset(email_token)
+        
         # 6. Cleanup temporary file
         if temp_pdf_path and os.path.exists(temp_pdf_path):
             try:

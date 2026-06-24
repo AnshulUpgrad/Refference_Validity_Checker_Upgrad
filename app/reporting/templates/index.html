@@ -845,6 +845,114 @@
             border-radius: 18px;
             box-shadow: var(--shadow-sm);
         }
+
+        /* Collapsible Settings Panel */
+        .settings-container {
+            max-width: 600px;
+            margin: 0 auto 1.5rem auto;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .settings-toggle-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: none;
+            border: none;
+            padding: 1rem 1.25rem;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: left;
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .settings-toggle-btn:hover {
+            color: var(--color-accent);
+            background-color: var(--color-accent-bg);
+        }
+
+        .settings-arrow {
+            margin-left: auto;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .settings-container.expanded .settings-arrow {
+            transform: rotate(180deg);
+        }
+
+        .settings-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease;
+            opacity: 0;
+            border-top: 1px solid transparent;
+            background-color: #faf9f6;
+        }
+
+        .settings-container.expanded .settings-content {
+            max-height: 300px;
+            opacity: 1;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .settings-grid {
+            padding: 1.25rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 600px) {
+            .settings-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .settings-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .settings-field label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .settings-field input {
+            padding: 0.6rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            font-family: inherit;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .settings-field input:focus {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+        }
+
+        .field-desc {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
@@ -856,6 +964,34 @@
 
         <!-- 1. Upload View -->
         <div id="uploadView" class="view-panel active">
+            <!-- Collapsible Settings Panel -->
+            <div class="settings-container" id="settingsContainer">
+                <button class="settings-toggle-btn" onclick="toggleSettings(event)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Configure Custom API Credentials (Optional)</span>
+                    <svg class="settings-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="settings-content" id="settingsContent">
+                    <div class="settings-grid">
+                        <div class="settings-field">
+                            <label for="crossrefEmail">Crossref Polite Email</label>
+                            <input type="email" id="crossrefEmail" placeholder="your-email@example.com" oninput="saveSettingsToLocal()">
+                            <span class="field-desc">Used for Polite Pool requests. Defaults to server environment if blank.</span>
+                        </div>
+                        <div class="settings-field">
+                            <label for="openrouterKey">OpenRouter API Key</label>
+                            <input type="password" id="openrouterKey" placeholder="sk-or-v1-..." oninput="saveSettingsToLocal()">
+                            <span class="field-desc">Required for LLM verification. Defaults to server environment if blank.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="upload-card" id="dropZone" onclick="triggerFileInput()">
                 <div class="upload-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1031,8 +1167,13 @@
             setTimeout(() => logStep("Segmenting references and querying databases (Crossref & arXiv)..."), 2400);
             setTimeout(() => logStep("Running web search checks & auditing legitimacy using Gemini 2.5 Flash..."), 4000);
 
+            const email = document.getElementById('crossrefEmail').value.trim();
+            const apiKey = document.getElementById('openrouterKey').value.trim();
+
             const formData = new FormData();
             formData.append("file", file);
+            if (email) formData.append("email", email);
+            if (apiKey) formData.append("api_key", apiKey);
 
             fetch("/upload", {
                 method: "POST",
@@ -1387,6 +1528,34 @@
 
             showView('uploadView');
         }
+
+        // Settings panel toggle
+        function toggleSettings(event) {
+            event.stopPropagation();
+            const container = document.getElementById('settingsContainer');
+            container.classList.toggle('expanded');
+        }
+
+        // Save settings to LocalStorage
+        function saveSettingsToLocal() {
+            const email = document.getElementById('crossrefEmail').value.trim();
+            const apiKey = document.getElementById('openrouterKey').value.trim();
+            
+            localStorage.setItem('crossref_email', email);
+            localStorage.setItem('openrouter_key', apiKey);
+        }
+
+        // Load settings from LocalStorage
+        function loadSettingsFromLocal() {
+            const email = localStorage.getItem('crossref_email') || '';
+            const apiKey = localStorage.getItem('openrouter_key') || '';
+            
+            document.getElementById('crossrefEmail').value = email;
+            document.getElementById('openrouterKey').value = apiKey;
+        }
+
+        // Initialize settings on page load
+        window.addEventListener('DOMContentLoaded', loadSettingsFromLocal);
     </script>
 </body>
 </html>
