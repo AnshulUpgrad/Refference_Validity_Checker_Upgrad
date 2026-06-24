@@ -74,7 +74,7 @@ async def verify_match_with_llm(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 content = response.json()["choices"][0]["message"]["content"]
@@ -159,7 +159,7 @@ async def verify_unmatched_citation(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 content = response.json()["choices"][0]["message"]["content"]
@@ -244,7 +244,7 @@ async def verify_doi_redirect_metadata(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 content = response.json()["choices"][0]["message"]["content"]

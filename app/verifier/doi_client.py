@@ -63,7 +63,7 @@ class DOIClient:
 
     async def _fetch_crossref_doi(self, doi: str) -> Optional[Dict[str, Any]]:
         url = f"https://api.crossref.org/works/{doi}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             try:
                 logger.info(f"Crossref Direct DOI request for: '{doi}'")
                 response = await client.get(url, headers=self.headers)
@@ -131,7 +131,7 @@ class DOIClient:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 logger.info(f"Resolving DOI Redirect for: '{doi}'")
                 # Do not follow redirects automatically to capture Location header from doi.org (never blocked by Cloudflare)
@@ -145,7 +145,7 @@ class DOIClient:
                     
                 if not final_url:
                     # Fallback: try with follow_redirects=True in case of direct resolution
-                    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client_follow:
+                    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client_follow:
                         response_follow = await client_follow.get(url, headers=headers)
                         final_url = str(response_follow.url)
                 
@@ -161,7 +161,7 @@ class DOIClient:
                             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                             "Accept-Language": "en-US,en;q=0.5"
                         }
-                        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as pub_client:
+                        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as pub_client:
                             pub_response = await pub_client.get(final_url, headers=pub_headers)
                             if pub_response.status_code == 200:
                                 html_text = pub_response.text

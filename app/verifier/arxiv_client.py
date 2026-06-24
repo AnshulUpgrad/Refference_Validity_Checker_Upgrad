@@ -73,7 +73,7 @@ class ArxivClient:
         """
         params = {"id_list": arxiv_id}
         
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             try:
                 logger.info(f"ArXiv API request for: '{arxiv_id}'")
                 response = await client.get(self.BASE_URL, params=params, follow_redirects=True)

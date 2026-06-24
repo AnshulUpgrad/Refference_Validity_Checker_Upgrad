@@ -145,7 +145,7 @@ class CrossrefClient:
             "rows": 3  # Retrieve top 3 results to pick the best match
         }
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             for attempt in range(retries):
                 try:
                     logger.info(f"API request for: '{query[:40]}...' (Attempt {attempt+1}/{retries})")

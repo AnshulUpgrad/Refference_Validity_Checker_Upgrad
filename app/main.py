@@ -37,26 +37,28 @@ async def process_citations(
     Asynchronously queries Crossref and validates all citations.
     """
     client = CrossrefClient(mailto=mailto, cache_db_path=cache_path)
+    semaphore = asyncio.Semaphore(5)
     
     async def process_single(cit: Dict[str, Any]) -> Dict[str, Any]:
-        raw_ref = cit["raw_reference"]
-        normalized_ref = clean_reference(raw_ref)
-        
-        # Query Crossref API
-        candidates = await client.query_reference(normalized_ref)
-        
-        # Verify and classify match
-        verification = await verify_reference(raw_ref, candidates)
-        
-        return {
-            "reference_id": cit["reference_id"],
-            "raw_reference": raw_ref,
-            "normalized_reference": normalized_ref,
-            "status": verification["status"],
-            "confidence": verification["confidence"],
-            "matched_metadata": verification["matched_metadata"],
-            "llm_verdict": verification["llm_verdict"]
-        }
+        async with semaphore:
+            raw_ref = cit["raw_reference"]
+            normalized_ref = clean_reference(raw_ref)
+            
+            # Query Crossref API
+            candidates = await client.query_reference(normalized_ref)
+            
+            # Verify and classify match
+            verification = await verify_reference(raw_ref, candidates)
+            
+            return {
+                "reference_id": cit["reference_id"],
+                "raw_reference": raw_ref,
+                "normalized_reference": normalized_ref,
+                "status": verification["status"],
+                "confidence": verification["confidence"],
+                "matched_metadata": verification["matched_metadata"],
+                "llm_verdict": verification["llm_verdict"]
+            }
         
     # Process all citations concurrently
     tasks = [process_single(cit) for cit in citations]
